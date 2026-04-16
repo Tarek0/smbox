@@ -5,6 +5,7 @@ import numpy as np
 import math
 import random
 import time
+import inspect
 from datetime import datetime
 from catboost import CatBoostRegressor
 from sklearn.model_selection import train_test_split
@@ -95,6 +96,24 @@ class Optimise:
 
         return population
 
+    def _evaluate_objective(self, cfg, data, time_limit):
+        """Evaluate objective while supporting legacy custom objective signatures."""
+        try:
+            sig = inspect.signature(self.objective)
+            supports_time_limit = 'time_limit' in sig.parameters
+        except (TypeError, ValueError):
+            supports_time_limit = True
+
+        if supports_time_limit:
+            result = self.objective(cfg, data, time_limit=time_limit)
+        else:
+            result = self.objective(cfg, data)
+
+        if isinstance(result, tuple) and len(result) == 2:
+            return result
+
+        return result, 'OK'
+
 
     def evaluate_population(self, population, data, trial_counter=0):
         """
@@ -123,7 +142,7 @@ class Optimise:
 
             time_limit = t_end - time.time()
             cfg = population[i]  # Parameters to be evaluated
-            perf, time_status = self.objective(cfg, data, time_limit)
+            perf, time_status = self._evaluate_objective(cfg, data, time_limit)
             if time_status == 'END':
                 break
 
@@ -303,6 +322,7 @@ class Optimise:
         """mutate each gene based on the given mutation rate."""
 
         gene = _gene.copy()
+        gene_keys = list(gene.index) if hasattr(gene, 'index') else list(cfg_schema.get('tune', {}).keys())
         for i in range(len(gene)):
             x = np.random.random(1)[0]
             if x < mutation_rate:
@@ -318,8 +338,8 @@ class Optimise:
                     # random_value = random.uniform(-0.0001,0.0001)
                     gene[i] = (gene[i] + random_value)
                 elif isinstance(gene[i], str) == True:
-                    list_ = cfg_schema['tune'][gene.index[i]][
-                        'categories']  # look up possible values for the categorical param
+                    param_name = gene_keys[i]
+                    list_ = cfg_schema['tune'][param_name]['categories']
                     gene[i] = random.choice(list_)
 
         return gene

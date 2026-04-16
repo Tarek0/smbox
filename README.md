@@ -26,32 +26,20 @@
 🤖️ Custom Objective Function: Optimise any ML algorithm by selecting the performance metric that best fits your application.
 
 ## 🛠 Installation
-### For Users
-Install directly from the repository:
-```bash
-uv pip install git+https://github.com/Tarek0/smbox.git
+For Users (Non-Developers):
+If you just want to use smbox, you can install it directly from the repository:
 ```
-
-### For Developers
-Use `uv` for environment and dependency management.
+pip install git+https://github.com/Tarek0/smbox.git
+```
+For Developers:
+If you're a developer and intend to contribute or make changes to smbox, you'll want to clone the repository and install in "editable" mode. This ensures that changes you make are immediately reflected in the version of smbox that's used in your Python environment.
 
 1. Clone the repository:
-```bash
-git clone https://github.com/Tarek0/smbox.git
-```
-2. Navigate to the project:
-```bash
-cd smbox
-```
-3. Create a virtual environment and sync dependencies:
-```bash
-uv venv
-uv sync
-```
-4. (Optional) Run tests:
-```bash
-uv run pytest
-```
+```git clone https://github.com/Tarek0/smbox.git```
+2. Navigate to the cloned directory:
+```cd smbox```
+3. Install in editable mode:
+```pip install -e . ```
 
 
 ## 📄 License

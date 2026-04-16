@@ -1,6 +1,7 @@
 import pandas as pd
 import openml
 from sklearn.model_selection import train_test_split
+import pytest
 
 from smbox.utils import Logger
 from smbox.paramspace import rf_default_param_space
@@ -35,6 +36,14 @@ def test_objective(cfg, data):
     perf = cv_results['test_score'].mean()
 
     return perf
+
+
+def test_objective_with_time_limit(cfg, data, time_limit=None):
+    return 0.7, 'OK'
+
+
+def test_objective_legacy_stub(cfg, data):
+    return 0.6
 
 def fetch_open_ml_data(dataset_id):
     dataset = openml.datasets.get_dataset(dataset_id)
@@ -108,3 +117,47 @@ if __name__ == "__main__":
 
     optimiser = Optimise(config, test_objective, _random_seed, mlflow_tracking=True)
     optimiser.SMBOXOptimise(data_all, cfg_schema)
+
+
+def test_evaluate_objective_supports_legacy_signature():
+    optimiser = Optimise(
+        config={'output_root': '/tmp/', 'search_strategy': 'smbox', 'dataset': 1, 'algorithm': 'rf'},
+        objective=test_objective_legacy_stub,
+        random_seed=42
+    )
+    data = {
+        'X_train': pd.DataFrame({'a': [0, 1, 2, 3], 'b': [1, 1, 0, 0]}),
+        'y_train': pd.Series([0, 1, 0, 1])
+    }
+
+    perf, time_status = optimiser._evaluate_objective({'n_estimators': 10}, data, time_limit=1)
+    assert perf == 0.6
+    assert time_status == 'OK'
+
+
+def test_evaluate_objective_supports_time_limit_signature():
+    optimiser = Optimise(
+        config={'output_root': '/tmp/', 'search_strategy': 'smbox', 'dataset': 1, 'algorithm': 'rf'},
+        objective=test_objective_with_time_limit,
+        random_seed=42
+    )
+    data = {'X_train': pd.DataFrame({'a': [0, 1]}), 'y_train': pd.Series([0, 1])}
+
+    perf, time_status = optimiser._evaluate_objective({'n_estimators': 10}, data, time_limit=1)
+    assert perf == 0.7
+    assert time_status == 'OK'
+
+
+def test_mutation_handles_categorical_series():
+    cfg_schema = {
+        'tune': {
+            'depth': {'type': 'int', 'sample_dist': 'uniform', 'min': 1, 'max': 10},
+            'booster': {'type': 'str', 'sample_dist': 'choice', 'categories': ['gbtree', 'dart']}
+        },
+        'fix': {}
+    }
+    anchor = pd.Series({'depth': 3, 'booster': 'gbtree'})
+
+    mutated = Optimise._mutation(cfg_schema, anchor, mutation_rate=1.0, alpha=0.2)
+    assert mutated['booster'] in cfg_schema['tune']['booster']['categories']
+    assert mutated['depth'] >= 1

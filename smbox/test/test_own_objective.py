@@ -41,6 +41,10 @@ def test_objective(cfg, data):
 def test_objective_with_time_limit(cfg, data, time_limit=None):
     return 0.7, 'OK'
 
+
+def test_objective_legacy_stub(cfg, data):
+    return 0.6
+
 def fetch_open_ml_data(dataset_id):
     dataset = openml.datasets.get_dataset(dataset_id)
     print(dataset)
@@ -118,7 +122,7 @@ if __name__ == "__main__":
 def test_evaluate_objective_supports_legacy_signature():
     optimiser = Optimise(
         config={'output_root': '/tmp/', 'search_strategy': 'smbox', 'dataset': 1, 'algorithm': 'rf'},
-        objective=test_objective,
+        objective=test_objective_legacy_stub,
         random_seed=42
     )
     data = {
@@ -127,7 +131,7 @@ def test_evaluate_objective_supports_legacy_signature():
     }
 
     perf, time_status = optimiser._evaluate_objective({'n_estimators': 10}, data, time_limit=1)
-    assert isinstance(perf, float)
+    assert perf == 0.6
     assert time_status == 'OK'
 
 
